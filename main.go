@@ -24,6 +24,11 @@ func main() {
 			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 			os.Exit(1)
 		}
+	case "import":
+		if err := cmdImport(); err != nil {
+			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+			os.Exit(1)
+		}
 	case "help", "--help", "-h":
 		printUsage()
 	default:
@@ -39,10 +44,12 @@ func printUsage() {
 	fmt.Println("Usage:")
 	fmt.Println("  vanilladbc info <dbd_file> <build>")
 	fmt.Println("  vanilladbc convert <dbc_file> <dbd_file> <build> --plugin <plugin> [--output <file>]")
+	fmt.Println("  vanilladbc import <input_file> <dbd_file> <build> --plugin <plugin> --output <dbc_file>")
 	fmt.Println()
 	fmt.Println("Commands:")
 	fmt.Println("  info     - Show DBC table schema information")
-	fmt.Println("  convert  - Convert DBC file using a plugin")
+	fmt.Println("  convert  - Convert DBC file to another format (JSON, CSV, MySQL)")
+	fmt.Println("  import   - Import from another format back to DBC")
 	fmt.Println()
 	fmt.Println("Examples:")
 	fmt.Println("  # Show schema")
@@ -51,11 +58,19 @@ func printUsage() {
 	fmt.Println("  # Convert to JSON")
 	fmt.Println("  vanilladbc convert Spell.dbc Spell.dbd 1.12.1.5875 --plugin json --output spell.json")
 	fmt.Println()
+	fmt.Println("  # Import from JSON")
+	fmt.Println("  vanilladbc import spell.json Spell.dbd 1.12.1.5875 --plugin json --output Spell.dbc")
+	fmt.Println()
+	fmt.Println("  # Convert to CSV")
+	fmt.Println("  vanilladbc convert Spell.dbc Spell.dbd 1.12.1.5875 --plugin csv --output spell.csv")
+	fmt.Println()
 	fmt.Println("Available Plugins:")
 	fmt.Println("  json     - Convert to/from JSON format")
+	fmt.Println("  csv      - Convert to/from CSV format")
+	fmt.Println("  mysql    - Convert to/from MySQL tables (requires --mysql-* flags)")
 	fmt.Println()
-	fmt.Println("For more information about plugins, see:")
-	fmt.Println("  https://github.com/suprsokr/vanilladbc-json")
+	fmt.Println("For more information, see:")
+	fmt.Println("  https://github.com/suprsokr/vanilladbc")
 }
 
 func cmdInfo() error {
@@ -104,4 +119,45 @@ func cmdConvert() error {
 	}
 
 	return runConvert(dbcFile, dbdFile, buildStr, pluginName, outputFile)
+}
+
+func cmdImport() error {
+	if len(os.Args) < 6 {
+		return fmt.Errorf("usage: vanilladbc import <input_file> <dbd_file> <build> --plugin <plugin> --output <dbc_file>")
+	}
+
+	inputFile := os.Args[2]
+	dbdFile := os.Args[3]
+	buildStr := os.Args[4]
+
+	// Parse flags
+	var pluginName string
+	var outputFile string
+
+	for i := 5; i < len(os.Args); i++ {
+		switch os.Args[i] {
+		case "--plugin":
+			if i+1 >= len(os.Args) {
+				return fmt.Errorf("--plugin requires a value")
+			}
+			pluginName = os.Args[i+1]
+			i++
+		case "--output":
+			if i+1 >= len(os.Args) {
+				return fmt.Errorf("--output requires a value")
+			}
+			outputFile = os.Args[i+1]
+			i++
+		}
+	}
+
+	if pluginName == "" {
+		return fmt.Errorf("--plugin is required")
+	}
+
+	if outputFile == "" {
+		return fmt.Errorf("--output is required for import command")
+	}
+
+	return runImport(inputFile, dbdFile, buildStr, pluginName, outputFile)
 }

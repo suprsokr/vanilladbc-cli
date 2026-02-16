@@ -131,3 +131,67 @@ func runConvert(dbcFile, dbdFile, buildStr, pluginName, outputFile string) error
 
 	return nil
 }
+
+func runImport(inputFile, dbdFile, buildStr, pluginName, outputFile string) error {
+	// Parse DBD file
+	fmt.Printf("Parsing DBD file: %s\n", dbdFile)
+	dbdDef, err := dbd.ParseFile(dbdFile)
+	if err != nil {
+		return fmt.Errorf("failed to parse DBD file: %w", err)
+	}
+
+	// Get version definition
+	build, err := dbd.NewBuild(buildStr)
+	if err != nil {
+		return fmt.Errorf("invalid build: %w", err)
+	}
+
+	versionDef, err := dbdDef.GetVersionDefinition(*build)
+	if err != nil {
+		return fmt.Errorf("failed to get version definition: %w", err)
+	}
+
+	// Get reader plugin
+	readerPlugin, err := getReaderPlugin(pluginName, inputFile)
+	if err != nil {
+		return fmt.Errorf("failed to get reader plugin: %w", err)
+	}
+	defer readerPlugin.Close()
+
+	// Set schema for plugins that need it (JSON, CSV)
+	if setter, ok := readerPlugin.(interface {
+		SetSchema(*dbd.VersionDefinition, map[string]dbd.ColumnDefinition)
+	}); ok {
+		setter.SetSchema(versionDef, dbdDef.Columns)
+	}
+
+	// Read header
+	fmt.Printf("Reading from %s using %s plugin...\n", inputFile, pluginName)
+	_, _, err = readerPlugin.ReadHeader()
+	if err != nil {
+		return fmt.Errorf("failed to read header: %w", err)
+	}
+
+	// Read all records
+	var records []interface{}
+	recordCount := 0
+	for {
+		record, err := readerPlugin.ReadRecord()
+		if err != nil {
+			return fmt.Errorf("failed to read record: %w", err)
+		}
+		if record == nil {
+			break // No more records
+		}
+		records = append(records, record)
+		recordCount++
+	}
+
+	fmt.Printf("Read %d records\n", recordCount)
+
+	// TODO: Write records to DBC file using the DBC writer from vanilladbc library
+	fmt.Printf("Warning: DBC writing not yet fully implemented\n")
+	fmt.Printf("Records would be written to: %s\n", outputFile)
+
+	return nil
+}
