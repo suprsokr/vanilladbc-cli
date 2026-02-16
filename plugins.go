@@ -3,29 +3,29 @@ package main
 import (
 	"fmt"
 	"io"
+	"os"
 
 	"github.com/suprsokr/vanilladbc/pkg/dbc"
 	"github.com/suprsokr/vanilladbc/pkg/dbd"
 	"github.com/suprsokr/vanilladbc/pkg/plugin"
+	jsonplugin "github.com/suprsokr/vanilladbc-json"
 )
 
 // getPlugin returns a plugin instance based on the plugin name
 func getPlugin(name string, outputFile string) (plugin.Writer, error) {
-	// var writer io.Writer = os.Stdout
-	//
-	// if outputFile != "" {
-	// 	file, err := os.Create(outputFile)
-	// 	if err != nil {
-	// 		return nil, fmt.Errorf("failed to create output file: %w", err)
-	// 	}
-	// 	writer = file
-	// }
+	var writer io.Writer = os.Stdout
+
+	if outputFile != "" {
+		file, err := os.Create(outputFile)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create output file: %w", err)
+		}
+		writer = file
+	}
 
 	switch name {
 	case "json":
-		// JSON plugin would be imported here if available
-		// For now, return error indicating plugin not available
-		return nil, fmt.Errorf("json plugin not available - install vanilladbc-json package")
+		return jsonplugin.NewPretty(writer), nil
 	default:
 		return nil, fmt.Errorf("unknown plugin: %s", name)
 	}
