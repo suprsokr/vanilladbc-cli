@@ -1,0 +1,29 @@
+# Binaries
+vanilladbc-cli
+vanilladbc
+*.exe
+*.dll
+*.so
+*.dylib
+
+# Test binary
+*.test
+
+# Output files
+*.out
+
+# Go workspace
+go.work
+
+# IDE
+.vscode/
+.idea/
+*.swp
+
+# OS
+.DS_Store
+
+# Test data
+*.dbc
+*.db2
+*.json
